@@ -16,7 +16,18 @@ _Steamworks.NET_ fully supports Windows (32 and 64 bit), OSX, and Linux. Current
 
 [![Support via Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YFZZER8VNXKRC)
 
-## Installation
+## Specials to original repo
+
+This fork, presented by [Fa鸽](https://github.com/Akarinnnnn), contains some interesting changes made to Steamworks.NET. Some of them are not production ready, and some are probably not mergeable due to a lot of reasons.
+
+Here is the list
+- [`ValueTask<T>` based callback API](https://github.com/Akarinnnnn/Steamworks.NET/tree/valuetask-dispatcher)
+- [Directly awaitable `CallResult<T>`](https://github.com/Akarinnnnn/Steamworks.NET/tree/async-result)
+- [`dotnet pack`able project](https://github.com/Akarinnnnn/Steamworks.NET/tree/nuget-v3) Not ready, I think this need changes to .NET SDK.
+
+Please note this branch(the branch you see above change list) is served as a landing page. It's code is probably outdated. Try to build binary against this is not recommended.
+
+## installation
 
 You can find the installation instructions [here](https://steamworks.github.io/installation/).
 

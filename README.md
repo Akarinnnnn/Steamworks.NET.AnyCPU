@@ -21,6 +21,7 @@ _Steamworks.NET_ fully supports Windows (32 and 64 bit), OSX, and Linux. Current
 This fork, presented by [Fa鸽](https://github.com/Akarinnnnn), contains some interesting changes made to Steamworks.NET. Some of them are not production ready, and some are probably not mergeable due to a lot of reasons.
 
 Here is the list
+- [*Standalone* DLL targeting to **Any CPU** instead of x86 etc.](https://github.com/Akarinnnnn/Steamworks.NET.AnyCPU/tree/anycpu)
 - [`ValueTask<T>` based callback API](https://github.com/Akarinnnnn/Steamworks.NET/tree/valuetask-dispatcher)
 - [Directly awaitable `CallResult<T>`](https://github.com/Akarinnnnn/Steamworks.NET/tree/async-result)
 - [`dotnet pack`able project](https://github.com/Akarinnnnn/Steamworks.NET/tree/nuget-v3) Not ready, I think this need changes to .NET SDK.

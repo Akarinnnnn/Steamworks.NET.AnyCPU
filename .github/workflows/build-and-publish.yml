@@ -43,9 +43,11 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
             echo "Using manual version: $VERSION"
-          else
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
             echo "Using tag version: $VERSION"
+          else
+            VERSION=""
           fi
           
           # Set default version if empty

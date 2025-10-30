@@ -10,9 +10,10 @@ on:
     branches:
       - main
       - anycpu-2
+      - nuget-tag-test
     tags:
       - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*" # Matches YYYY.*.* format like 2025.162.5
-      - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*-*" # Matches YYYY.*.*-* format like 2025.162.5-beta1
+      - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*-*" # Matches YYYY.*.*-* format like 2025.162.5-beta1.
 
 permissions:
   id-token: write # Required for OIDC authentication

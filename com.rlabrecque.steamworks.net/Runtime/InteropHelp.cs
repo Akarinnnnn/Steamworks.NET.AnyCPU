@@ -15,9 +15,10 @@ using System.Runtime.InteropServices;
 using IntPtr = System.IntPtr;
 
 using System.Text;
+using System;
 
 namespace Steamworks {
-	public class InteropHelp {
+	public partial class InteropHelp {
 		public static void TestIfPlatformSupported() {
 #if !UNITY_EDITOR && !UNITY_STANDALONE && !UNITY_ANDROID && !STEAMWORKS_WIN && !STEAMWORKS_LIN_OSX
 			throw new System.InvalidOperationException("Steamworks functions can only be called on platforms that Steam is available on.");
@@ -42,19 +43,24 @@ namespace Steamworks {
 			}
 		}
 
-		// This continues to exist for both 'out string' and strings returned by Steamworks functions.
-		public static string PtrToStringUTF8(IntPtr nativeUtf8) {
-			if (nativeUtf8 == IntPtr.Zero) {
+        // This continues to exist for both 'out string' and strings returned by Steamworks functions.
+#if !STEAMWORKS_UNSAFE_ENABLED
+		public static string PtrToStringUTF8(IntPtr nativeUtf8)
+		{
+			if (nativeUtf8 == IntPtr.Zero)
+			{
 				return null;
 			}
 
 			int len = 0;
 
-			while (Marshal.ReadByte(nativeUtf8, len) != 0) {
+			while (Marshal.ReadByte(nativeUtf8, len) != 0)
+			{
 				++len;
 			}
 
-			if (len == 0) {
+			if (len == 0)
+			{
 				return string.Empty;
 			}
 
@@ -62,20 +68,36 @@ namespace Steamworks {
 			Marshal.Copy(nativeUtf8, buffer, 0, buffer.Length);
 			return Encoding.UTF8.GetString(buffer);
 		}
-
-		public static string ByteArrayToStringUTF8(byte[] buffer) {
+#endif
+        public static string ByteArrayToStringUTF8(byte[] buffer) {
 			int length = 0;
+#if NETCOREAPP2_1_OR_GREATER
+			// let JIT decide proper vectorization to apply
+			length = new ReadOnlySpan<byte>(buffer).IndexOf((byte)0);
+#else
 			while (length < buffer.Length && buffer[length] != 0) {
 				length++;
 			}
+#endif
 
-			return Encoding.UTF8.GetString(buffer, 0, length);
+            return Encoding.UTF8.GetString(buffer, 0, length);
 		}
 
-		public static void StringToByteArrayUTF8(string str, byte[] outArrayBuffer, int outArrayBufferSize)
-		{
-			outArrayBuffer = new byte[outArrayBufferSize];
-			int length = Encoding.UTF8.GetBytes(str, 0, str.Length, outArrayBuffer, 0);
+		public static void StringToByteArrayUTF8(string str, byte[] outArrayBuffer, int outArrayBufferSize) {
+#if NET6_0_OR_GREATER
+			ArgumentNullException.ThrowIfNull(outArrayBuffer);
+#else
+			if (outArrayBuffer == null) {
+				throw new ArgumentNullException(nameof(outArrayBuffer));
+			}
+#endif
+
+            int length = Encoding.UTF8.GetBytes(str, 0, str.Length, outArrayBuffer, 0);
+
+			// do buffer capacity check
+			if (length >= outArrayBuffer.Length - 1) {
+				throw new ArgumentOutOfRangeException(nameof(str), length, "Encoded string length is longer than 'outArrayByffer' can hold");
+			}
 			outArrayBuffer[length] = 0;
 		}
 
@@ -99,7 +121,17 @@ namespace Steamworks {
 				SetHandle(buffer);
 			}
 
-			protected override bool ReleaseHandle() {
+            public UTF8StringHandle(int bufferSize) : base(true)
+			{
+                SetHandle(Marshal.AllocHGlobal(bufferSize + 1));
+            }
+
+			public string BackToString()
+			{
+				return PtrToStringUTF8(handle);
+			}
+
+            protected override bool ReleaseHandle() {
 				if (!IsInvalid) {
 					Marshal.FreeHGlobal(handle);
 				}
@@ -107,15 +139,12 @@ namespace Steamworks {
 			}
 		}
 #else
-		public class UTF8StringHandle : IDisposable {
-			public UTF8StringHandle(string str) { }
-			public void Dispose() {}
-		}
+#error Without UTF8StringHandle Steamworks.NET will leak memory for each string passed to Steamworks functions. Please enable one of the platform symbols (e.g. STEAMWORKS_WIN) to fix this.
 #endif
 
-		// TODO - Should be IDisposable
-		// We can't use an ICustomMarshaler because Unity dies when MarshalManagedToNative() gets called with a generic type.
-		public class SteamParamStringArray {
+        // TODO - Should be IDisposable
+        // We can't use an ICustomMarshaler because Unity dies when MarshalManagedToNative() gets called with a generic type.
+        public class SteamParamStringArray {
 			// The pointer to each AllocHGlobal() string
 			IntPtr[] m_Strings;
 			// The pointer to the condensed version of m_Strings

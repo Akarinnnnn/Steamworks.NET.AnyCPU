@@ -1,4 +1,4 @@
-// This file is provided under The MIT License as part of Steamworks.NET.
+﻿// This file is provided under The MIT License as part of Steamworks.NET.
 // Copyright (c) 2013-2022 Riley Labrecque
 // Please see the included LICENSE.txt for additional information.
 
@@ -11,13 +11,20 @@
 
 #if !DISABLESTEAMWORKS
 
+#if STEAMWORKS_ANYCPU
+#nullable enable
+#endif
+
+using System;
 using System.Runtime.InteropServices;
 using IntPtr = System.IntPtr;
 
 using System.Text;
 
-namespace Steamworks {
-	public class InteropHelp {
+namespace Steamworks
+{
+	public partial class InteropHelp
+	{
 		public static void TestIfPlatformSupported() {
 #if !UNITY_EDITOR && !UNITY_STANDALONE && !UNITY_ANDROID && !STEAMWORKS_WIN && !STEAMWORKS_LIN_OSX
 			throw new System.InvalidOperationException("Steamworks functions can only be called on platforms that Steam is available on.");
@@ -43,6 +50,7 @@ namespace Steamworks {
 		}
 
 		// This continues to exist for both 'out string' and strings returned by Steamworks functions.
+#if !STEAMWORKS_UNSAFE_ENABLED
 		public static string PtrToStringUTF8(IntPtr nativeUtf8) {
 			if (nativeUtf8 == IntPtr.Zero) {
 				return null;
@@ -62,7 +70,7 @@ namespace Steamworks {
 			Marshal.Copy(nativeUtf8, buffer, 0, buffer.Length);
 			return Encoding.UTF8.GetString(buffer);
 		}
-
+#endif
 		public static string ByteArrayToStringUTF8(byte[] buffer) {
 			int length = 0;
 			while (length < buffer.Length && buffer[length] != 0) {
@@ -72,17 +80,29 @@ namespace Steamworks {
 			return Encoding.UTF8.GetString(buffer, 0, length);
 		}
 
-		public static void StringToByteArrayUTF8(string str, byte[] outArrayBuffer, int outArrayBufferSize)
-		{
-			outArrayBuffer = new byte[outArrayBufferSize];
+		public static void StringToByteArrayUTF8(string str, byte[] outArrayBuffer, int outArrayBufferSize) {
+#if NET6_0_OR_GREATER
+			ArgumentNullException.ThrowIfNull(outArrayBuffer);
+#else
+			if (outArrayBuffer == null) {
+				throw new ArgumentNullException(nameof(outArrayBuffer));
+			}
+#endif
+
 			int length = Encoding.UTF8.GetBytes(str, 0, str.Length, outArrayBuffer, 0);
+
+			// do buffer capacity check
+			if (length >= outArrayBuffer.Length - 1) {
+				throw new ArgumentOutOfRangeException(nameof(str), length, "Encoded string length is longer than 'outArrayByffer' can hold");
+			}
 			outArrayBuffer[length] = 0;
 		}
 
-		// This is for 'const char *' arguments which we need to ensure do not get GC'd while Steam is using them.
+		// This is for 'const char *' and `char *` arguments which we need to ensure do not get GC'd while Steam is using them.
 		// We can't use an ICustomMarshaler because Unity crashes when a string between 96 and 127 characters long is defined/initialized at the top of class scope...
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_ANDROID || STEAMWORKS_WIN || STEAMWORKS_LIN_OSX
-		public class UTF8StringHandle : Microsoft.Win32.SafeHandles.SafeHandleZeroOrMinusOneIsInvalid {
+		public class UTF8StringHandle : Microsoft.Win32.SafeHandles.SafeHandleZeroOrMinusOneIsInvalid
+		{
 			public UTF8StringHandle(string str)
 				: base(true) {
 				if (str == null) {
@@ -99,6 +119,21 @@ namespace Steamworks {
 				SetHandle(buffer);
 			}
 
+			public UTF8StringHandle(int bufferSize) : base(true) {
+				SetHandle(Marshal.AllocHGlobal(bufferSize + 1));
+			}
+
+#if STEAMWORKS_ANYCPU
+			public string? BackToString() {
+#else
+			public string BackToString() {
+#endif
+				if (IsInvalid)
+					return null;
+
+				return PtrToStringUTF8(handle);
+			}
+
 			protected override bool ReleaseHandle() {
 				if (!IsInvalid) {
 					Marshal.FreeHGlobal(handle);
@@ -113,15 +148,20 @@ namespace Steamworks {
 		}
 #endif
 
-		// TODO - Should be IDisposable
 		// We can't use an ICustomMarshaler because Unity dies when MarshalManagedToNative() gets called with a generic type.
-		public class SteamParamStringArray {
+		public class SteamParamStringArray : System.IDisposable
+		{
 			// The pointer to each AllocHGlobal() string
+#if STEAMWORKS_ANYCPU
+			IntPtr[]? m_Strings;
+#else
 			IntPtr[] m_Strings;
+#endif
 			// The pointer to the condensed version of m_Strings
 			IntPtr m_ptrStrings;
 			// The pointer to the StructureToPtr version of SteamParamStringArray_t that will get marshaled
 			IntPtr m_pSteamParamStringArray;
+			private bool _disposedValue;
 
 			public SteamParamStringArray(System.Collections.Generic.IList<string> strings) {
 				if (strings == null) {
@@ -148,31 +188,51 @@ namespace Steamworks {
 				Marshal.StructureToPtr(stringArray, m_pSteamParamStringArray, false);
 			}
 
-			~SteamParamStringArray() {
-				if (m_Strings != null) {
-					foreach (IntPtr ptr in m_Strings) {
-						Marshal.FreeHGlobal(ptr);
+			public static implicit operator IntPtr(SteamParamStringArray that) {
+				return that.m_pSteamParamStringArray;
+			}
+
+			protected virtual void Dispose(bool disposing) {
+				if (!_disposedValue) {
+					if (disposing) {
+						// Part of dispose pattern. No managed resources to dispose.
 					}
-                }
 
-				if (m_ptrStrings != IntPtr.Zero) {
-					Marshal.FreeHGlobal(m_ptrStrings);
-				}
+					// cleanup unmanaged resources
+					if (m_Strings != null) {
+						foreach (IntPtr ptr in m_Strings) {
+							Marshal.FreeHGlobal(ptr);
+						}
+					}
 
-				if (m_pSteamParamStringArray != IntPtr.Zero) {
-					Marshal.FreeHGlobal(m_pSteamParamStringArray);
+					if (m_ptrStrings != IntPtr.Zero) {
+						Marshal.FreeHGlobal(m_ptrStrings);
+					}
+
+					if (m_pSteamParamStringArray != IntPtr.Zero) {
+						Marshal.FreeHGlobal(m_pSteamParamStringArray);
+					}
+
+					_disposedValue = true;
 				}
 			}
 
-			public static implicit operator IntPtr(SteamParamStringArray that) {
-				return that.m_pSteamParamStringArray;
+			~SteamParamStringArray() {
+				Dispose(disposing: false);
+			}
+
+			public void Dispose() {
+				// Do not change this code. Put cleanup code into the "Dispose(bool disposing)" method.
+				Dispose(disposing: true);
+				GC.SuppressFinalize(this);
 			}
 		}
 	}
 
 	// TODO - Should be IDisposable
 	// MatchMaking Key-Value Pair Marshaller
-	public class MMKVPMarshaller {
+	public class MMKVPMarshaller
+	{
 		private IntPtr m_pNativeArray;
 		private IntPtr m_pArrayEntries;
 
@@ -204,63 +264,6 @@ namespace Steamworks {
 		public static implicit operator IntPtr(MMKVPMarshaller that) {
 			return that.m_pNativeArray;
 		}
-	}
-
-	public class DllCheck {
-#if DISABLED
-		[DllImport("kernel32.dll")]
-		public static extern IntPtr GetModuleHandle(string lpModuleName);
-
-		[DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-		extern static int GetModuleFileName(IntPtr hModule, StringBuilder strFullPath, int nSize);
-#endif
-
-		/// <summary>
-		/// This is an optional runtime check to ensure that the dlls are the correct version. Returns false only if the steam_api.dll is found and it's the wrong size or version number.
-		/// </summary>
-		public static bool Test() {
-#if DISABLED
-			bool ret = CheckSteamAPIDLL();
-#endif
-			return true;
-		}
-
-#if DISABLED
-		private static bool CheckSteamAPIDLL() {
-			string fileName;
-			int fileBytes;
-			if (IntPtr.Size == 4) {
-				fileName = "steam_api.dll";
-				fileBytes = Version.SteamAPIDLLSize;
-			}
-			else {
-				fileName = "steam_api64.dll";
-				fileBytes = Version.SteamAPI64DLLSize;
-			}
-
-			IntPtr handle = GetModuleHandle(fileName);
-			if (handle == IntPtr.Zero) {
-				return true;
-			}
-
-			StringBuilder filePath = new StringBuilder(256);
-			GetModuleFileName(handle, filePath, filePath.Capacity);
-			string file = filePath.ToString();
-
-			// If we can not find the file we'll just skip it and let the DllNotFoundException take care of it.
-			if (System.IO.File.Exists(file)) {
-				System.IO.FileInfo fInfo = new System.IO.FileInfo(file);
-				if (fInfo.Length != fileBytes) {
-					return false;
-				}
-
-				if (System.Diagnostics.FileVersionInfo.GetVersionInfo(file).FileVersion != Version.SteamAPIDLLVersion) {
-					return false;
-				}
-			}
-			return true;
-		}
-#endif
 	}
 }
 

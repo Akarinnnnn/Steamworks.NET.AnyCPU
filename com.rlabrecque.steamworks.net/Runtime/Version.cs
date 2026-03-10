@@ -13,11 +13,15 @@
 
 namespace Steamworks {
 	public static class Version {
+		// TODO: MANUAL edit this file on each targeting Steamworks API update
 		public const string SteamworksNETVersion = "2025.163.0";
 		public const string SteamworksSDKVersion = "1.63";
-		public const string SteamAPIDLLVersion = "10.24.16.75";
+        // used to for Steamworks.NET.AnyCPU to check whether the loaded native is compatible
+        public const string SteamAPIDLLVersion = "10.24.16.75";
+		[System.Obsolete("SteamAPIDLLVersion is more reliable to check versions", DiagnosticId = "SNET4001")]
 		public const int SteamAPIDLLSize = 274072;
-		public const int SteamAPI64DLLSize = 317080;
+        [System.Obsolete("SteamAPIDLLVersion is more reliable to check versions", DiagnosticId = "SNET4001")]
+        public const int SteamAPI64DLLSize = 317080;
 	}
 }
 

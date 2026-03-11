@@ -24,14 +24,14 @@ namespace Steamworks
 				return;
 
 			StringBuilder sbModulePath = new(65535);
-			if (GetModuleFileName(loadedWindowsSteamModule, sbModulePath, sbModulePath.Capacity) != 0)
+			if (GetModuleFileName(loadedWindowsSteamModule, sbModulePath, sbModulePath.Capacity) == 0)
 				throw new ArgumentException("Module path is longer than excepted(65535), the hard path length limit as of 2026/3/10, ",
 					nameof(loadedWindowsSteamModule));
 
 			string modulePath = sbModulePath.ToString();
 			FileVersionInfo ver = FileVersionInfo.GetVersionInfo(modulePath);
 
-			if (ver.FileVersion == VersionChecker.ExpectedVersion) {
+			if (ver.FileVersion == ExpectedVersion) {
 				Debug.WriteLine($"Steamworks DLL version check passed: {ver.FileVersion}");
 			} else {
 				throw new SteamworksDllMismatchException($"Steamworks DLL version mismatch: expected {VersionChecker.ExpectedVersion}," +

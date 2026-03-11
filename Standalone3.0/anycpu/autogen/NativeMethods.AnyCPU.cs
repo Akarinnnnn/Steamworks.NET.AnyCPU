@@ -38,6 +38,10 @@ namespace Steamworks
 					string x64LibName = $"{libraryName}64";
 					NativeLibrary.TryLoad(x64LibName, assembly, searchPath, out nint lib);
 
+					if (lib != 0) {
+						VersionChecker.CheckedGoodOrThrow(lib);
+					}
+
 					return lib;
 				} else {
 					// first chance search, if failed or specified, check the assembly directory for steam natives

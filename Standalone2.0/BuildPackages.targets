@@ -39,6 +39,9 @@
 		<!-- Linux x64 -->
 		<Copy SourceFiles="$(PluginsBase)libsteam_api.so"
 		      DestinationFolder="$(NativeBase)linux-x64\native\" SkipUnchangedFiles="true" />
+		<!-- Linux arm64 -->
+		<Copy SourceFiles="$(PluginsBase)linuxarm64\libsteam_api.so"
+		      DestinationFolder="$(NativeBase)linux-arm64\native\" SkipUnchangedFiles="true" />
 		<!-- Windows x64 -->
 		<Copy SourceFiles="$(PluginsBase)steam_api64.dll"
 		      DestinationFolder="$(NativeBase)win-x64\native\" SkipUnchangedFiles="true" />

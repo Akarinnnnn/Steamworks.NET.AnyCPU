@@ -14,7 +14,7 @@
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<PackageId>Steamworks.NET.MonoGame</PackageId>
 		<Authors>rlabrecque;CartBlanche</Authors>
-		<PackageVersion>2026.5.6</PackageVersion>
+		<PackageVersion>2026.6.12</PackageVersion>
 		<Description>Steamworks.NET fork tuned for MonoGame and cross-platform runtime delivery.</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/CartBlanche/Steamworks.NET</PackageProjectUrl>

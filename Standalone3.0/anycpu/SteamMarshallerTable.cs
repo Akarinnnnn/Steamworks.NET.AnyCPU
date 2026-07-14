@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 
 namespace Steamworks
 {
@@ -16,9 +15,8 @@ namespace Steamworks
 		// partial, in generated file
 		// static ConditionalMarshallerTable();
 
-		public static T Marshal<T>(IntPtr unmanagetype)
-		{
+		public static T Marshal<T>(IntPtr unmanagetype) {
 			return Impl<T>.Marshaller(unmanagetype);
-        }
+		}
 	}
 }

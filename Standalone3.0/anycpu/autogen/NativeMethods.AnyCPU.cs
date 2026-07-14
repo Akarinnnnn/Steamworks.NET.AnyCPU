@@ -19,6 +19,8 @@ namespace Steamworks
 			if (libraryName == NativeLibraryName || libraryName == NativeLibrary_SDKEncryptedAppTicket) {
 				// check are we on win64, the special case we are going to handle
 				if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && Environment.Is64BitProcess) {
+					// *nix Godot handling on another branch. first branch is enough for Godot on Windows though, see next branch for details.
+
 					// check who is requesting steam native
 					if (assembly.GetName().Name != "Steamworks.NET") {
 						// Unmanaged libraries(steam native dll) will be cached(probably by name),
@@ -35,6 +37,10 @@ namespace Steamworks
 					// platform specific suffix is not needed, to reuse default unmanaged dependencies resolve logic on win64
 					string x64LibName = $"{libraryName}64";
 					NativeLibrary.TryLoad(x64LibName, assembly, searchPath, out nint lib);
+
+					if (lib != 0) {
+						VersionChecker.CheckedGoodOrThrow(lib);
+					}
 
 					return lib;
 				} else {
@@ -54,13 +60,16 @@ namespace Steamworks
 						string searchDirectory = Path.GetDirectoryName(assembly.Location);
 
 						if (string.IsNullOrEmpty(searchDirectory)) {
+							// basiclly Godot will fall here, it loads assemblies from memory.
+							// but on Windows it doesn't seem need, because Windows searchs dlls next to MainProcess.exe by default
 							System.Diagnostics.Debug.WriteLine("It seems you are loading Steamworks.NET.AnyCPU from memory," +
 								" auto-detect steam native location is not possible," +
 								" now trying to load from AppDomain.BaseDirectory." +
 								" If still fails, please call" +
 								" NativeLibrary.SetDllImporterResplver(typeof(Steamworks.SteamAPI).Assembly, YourResolver) manually.");
 
-							searchDirectory = AppDomain.CurrentDomain.BaseDirectory;
+							// Godot sets AppContext.BaseDirectory for managed plugin loads, we can use it here.
+							searchDirectory = AppContext.BaseDirectory;
 						}
 
 						string path = Path.Combine(searchDirectory, Path.ChangeExtension(nixPrefix + libraryName, extension));

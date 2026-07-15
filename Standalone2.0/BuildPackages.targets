@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Project>
-	<Target Name="PrepareFolderStructure" DependsOnTargets="Build"
+	<Target Name="PrepareFolderStructure" DependsOnTargets="Build;StageNativeAssets"
 			Outputs="@(O_PrepareFolderStructure)">
 		<PropertyGroup>
 			<AsmBase>$(ProjectDir)bin\nuget\runtime\</AsmBase>
@@ -26,7 +26,7 @@
 			<Output	ItemName="O_PrepareFolderStructure" TaskParameter="CopiedFiles"/>
 		</Copy>
 	</Target>
-	<Target Name="StageNativeAssets" BeforeTargets="Pack">
+	<Target Name="StageNativeAssets" BeforeTargets="PrepareFolderStructure">
 		<PropertyGroup>
 			<NativeBase>$(ProjectDir)bin\nuget\runtime\</NativeBase>
 			<PluginsBase>$(ProjectDir)..\com.rlabrecque.steamworks.net\Plugins\</PluginsBase>

@@ -117,9 +117,9 @@ def main(parser: Parser):
 
     for f in parser.files:
         for struct in f.structs:
-            lines.extend(parse(struct, True, anyCpuConditionalMarshallerLines, packsizeAwareStructNames, parser))
+            lines.extend(parse(struct, struct.name, anyCpuConditionalMarshallerLines, packsizeAwareStructNames, parser))
         for callback in f.callbacks:
-            callbacklines.extend(parse(callback, True, anyCpuConditionalMarshallerLines, packsizeAwareStructNames, parser))
+            callbacklines.extend(parse(callback, callback.name, anyCpuConditionalMarshallerLines, packsizeAwareStructNames, parser))
 
     with open("../com.rlabrecque.steamworks.net/Runtime/autogen/SteamStructs.cs", "wb") as out:
         with open("templates/header.txt", "r") as f:
@@ -154,10 +154,12 @@ def main(parser: Parser):
         
         out.write(bytes("#endif // !DISABLESTEAMWORKS\n", "utf-8"))
 
-def parse(struct: Struct, isMainStruct, marshalTableLines: list[str], packsizeAwareStructNames: list[str], parser: Parser) -> list[str]:
+def parse(struct: Struct, mainStructName: str, marshalTableLines: list[str], packsizeAwareStructNames: list[str], parser: Parser) -> list[str]:
     # ignore structs that manually defined by us
     # ignore nested structs, they probably handled by hand
     # ignore structs which has nested types, they probably interop by hand
+    isMainStruct = mainStructName is not None and struct.name == mainStructName
+
     if struct.name in g_SkippedStructs or struct.should_not_generate():
         return []
 
@@ -180,7 +182,6 @@ def parse(struct: Struct, isMainStruct, marshalTableLines: list[str], packsizeAw
         lines.append("\t[StructLayout(LayoutKind.Explicit, Pack = " + packsize + ")]")
         isExplicitStruct = True
     elif isMainStruct and not struct.is_sequential:
-         
         if struct.packsize != "Packsize.value" and structname not in g_SequentialStructs:
             customsize = ""
             if len(struct.fields) == 0:
@@ -223,31 +224,36 @@ def parse(struct: Struct, isMainStruct, marshalTableLines: list[str], packsizeAw
 
     fieldHandlingStructName = structname
     for field in struct.fields:
-        if not isMainStruct:
-            fieldHandlingStructName = fieldHandlingStructName[:structname.rindex("_")]
+        if field.type in packsizeAwareStructNames and mainStructName not in packsizeAwareStructNames:
+            print(f"Found field '{field.name}' of type '{field.type}' nested in struct '{structname}', which is leaked from promotion")
 
-        lines.extend(parse_field(field, fieldHandlingStructName, isMainStruct, parser))
+            innerStruct: Struct = parser.resolveTypeInfo(field.type)
+            assert innerStruct is not None, f"Field '{mainStructName}::{field.name}' is not parsed"
+            assert isinstance(innerStruct, Struct), f"Field '{mainStructName}::{field.name}' is not parsed as a struct, but is in packsize aware struct list, this is a bug in Binding Generator"
+            
+            lines.append(f"#error SNETBIND0001 Found field '{fieldHandlingStructName}::{field.name}' of type '{field.type}' \
+, which is packsize aware while the containing struct \
+is not. This is typically caused by Binding Generator bug.")
+		
+        lines.extend(parse_field(field, mainStructName, isMainStruct, parser))
         
-    if fieldHandlingStructName in packsizeAwareStructNames and not isMainStruct:
-        mainStructName = structname[:structname.rindex("_")]
-        packKind = structname[structname.rindex("_") + 1:]
-
+    if mainStructName in packsizeAwareStructNames and not isMainStruct:
         lines.append("")
-        lines.append(f"\t\tpublic static implicit operator {mainStructName}({mainStructName}_{packKind} value) {{")
+        lines.append(f"\t\tpublic static implicit operator {mainStructName}({fieldHandlingStructName} value) {{")
         lines.append(f"\t\t\t{mainStructName} result = default;")
         
         for field in struct.fields:
-            gen_fieldcopycode(field, structname, lines)
+            emit_fieldcopycode(field, structname, lines)
         
         lines.append(f"\t\t\treturn result;")
         lines.append("\t\t}")
 
         lines.append("")
-        lines.append(f"\t\tpublic static implicit operator {mainStructName}_{packKind}({mainStructName} value) {{")
-        lines.append(f"\t\t\t{mainStructName}_{packKind} result = default;")
+        lines.append(f"\t\tpublic static implicit operator {fieldHandlingStructName}({mainStructName} value) {{")
+        lines.append(f"\t\t\t{fieldHandlingStructName} result = default;")
         
         for field in struct.fields:
-            gen_fieldcopycode(field, structname, lines)
+            emit_fieldcopycode(field, structname, lines)
         
         lines.append(f"\t\t\treturn result;")
         lines.append("\t\t}")
@@ -280,13 +286,13 @@ def parse(struct: Struct, isMainStruct, marshalTableLines: list[str], packsizeAw
         largePackStruct = deepcopy(struct)
         largePackStruct.name = structname + "_LargePack"
         largePackStruct.packsize = 8
-        lines.extend(parse(largePackStruct, False, marshalTableLines, packsizeAwareStructNames, parser))
+        lines.extend(parse(largePackStruct, mainStructName, marshalTableLines, packsizeAwareStructNames, parser))
         
         lines.append("\t#endif")
 
     return lines
 
-def gen_fieldcopycode(field, structname, marshalTableLines):
+def emit_fieldcopycode(field, structname, marshalTableLines):
     fieldtype = g_TypeConversionDict.get(field.type, field.type)
     fieldtype = g_SpecialFieldTypes.get(structname, dict()).get(field.name, fieldtype)
 
@@ -303,8 +309,11 @@ def parse_field(field: StructField, structname: str, isMainStruct: bool, parser:
         else:
             lines.append("\t" + comment)
 
-    fieldtype = g_TypeConversionDict.get(field.type, field.type)
+    rawTypeName = field.type
+    fieldtype = g_TypeConversionDict.get(field.type, None)
     fieldtype = g_SpecialFieldTypes.get(structname, dict()).get(field.name, fieldtype)
+    assert not ((rawTypeName in parser.packSizeAwareStructs) and (fieldtype is not None)), f"Field '{structname}::{field.name}' is of type '{rawTypeName}', which is packsize aware while the containing struct is not. Binding Generator does not support this case."
+    fieldtype = fieldtype or rawTypeName
 
     explicit = g_ExplicitStructs.get(structname, False)
     if explicit:

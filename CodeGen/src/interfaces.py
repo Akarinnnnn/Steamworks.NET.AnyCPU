@@ -64,6 +64,7 @@ g_TypeDict = {
     "ISteamMatchmakingPingResponse *": "IntPtr",
     "ISteamMatchmakingPlayersResponse *": "IntPtr",
     "ISteamMatchmakingRulesResponse *": "IntPtr",
+    "ISteamMatchmakingServerFriendsResponse *": "IntPtr",
     #"MatchMakingKeyValuePair_t **": "IntPtr", HACK in parse_args()
 
     "ControllerAnalogActionData_t": "InputAnalogActionData_t",
@@ -744,7 +745,7 @@ def parse_func_native(f, interface, func: Function, strEntryPoint: str, args, ge
         if returntype == "bool":
             g_NativeMethods.append("\t\t[return: MarshalAs(UnmanagedType.I1)]")
 
-        g_NativeMethods.append("\t\tpublic static extern {0} {1}({2});".format(returntype, strEntryPoint, pinvokeargs))
+        g_NativeMethods.append("\t\tinternal static extern {0} {1}({2});".format(returntype, strEntryPoint, pinvokeargs))
         g_NativeMethods.append("")
 
         if isPacksizeAware:
@@ -754,7 +755,7 @@ def parse_func_native(f, interface, func: Function, strEntryPoint: str, args, ge
             if returntype == "bool":
                 g_NativeMethods.append("\t\t[return: MarshalAs(UnmanagedType.I1)]")
 
-            g_NativeMethods.append("\t\tpublic static extern {0} {1}({2});".format(returntype, strEntryPoint, largePackPInvokeArgs))
+            g_NativeMethods.append("\t\tinternal static extern {0} {1}({2});".format(returntype, strEntryPoint, largePackPInvokeArgs))
             g_NativeMethods.append("\t#endif")
             g_NativeMethods.append("")
         pass

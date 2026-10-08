@@ -51,25 +51,28 @@
 		<None Include="../com.rlabrecque.steamworks.net/Plugins/libsteam_api.so" Pack="true" LinkBase="native/linux-x64">
 			<PackagePath>runtimes/linux-x64/native</PackagePath>
 			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
-			<TargetPath>libsteam_api.so</TargetPath>
-			<!-- Sorry for blown your arm64 output, if you run SDK or IDE on such systems, please set $(DisableSNetDevelopmentAssets) to true -->
+			<TargetPath>runtimes/linux-x64/libsteam_api.so</TargetPath>
 		</None>
 		<None Include="../com.rlabrecque.steamworks.net/Plugins/androidarm64/libsteam_api.so" Pack="true" LinkBase="native" Link="native/android-arm64/libsteam_api.so">
 			<PackagePath>runtimes/android-arm64/native</PackagePath>
-			<!-- I don't think dotnet SDK ran on Android -->
+			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
+			<TargetPath>runtimes/android-arm64/libsteam_api.so</TargetPath>
 		</None>
 		<None Include="../com.rlabrecque.steamworks.net/Plugins/linuxarm64/libsteam_api.so" Pack="true" LinkBase="native" Link="native/linux-arm64/libsteam_api.so">
 			<PackagePath>runtimes/linux-arm64/native</PackagePath>
+			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
+			<TargetPath>runtimes/linux-arm64/libsteam_api.so</TargetPath>
 		</None>
 		<!-- In fact there is a linux-x86 version, but it's filename is conflict with linux-x64 version due to historical reasons. Therefore this repo didn't include it. -->
 		<None Include="../com.rlabrecque.steamworks.net/Plugins/steam_api.bundle/Contents/MacOS/libsteam_api.dylib" Pack="true" LinkBase="native/osx-x64">
 			<PackagePath>runtimes/osx-x64/native</PackagePath>
-			<!-- Sorry for blown your legacy MacOS output, if you run SDK or IDE on such systems, please set $(DisableSNetDevelopmentAssets) to true -->
+			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
+			<TargetPath>runtimes/osx-x64/libsteam_api.dylib</TargetPath>
 		</None>
 		<None Include="../com.rlabrecque.steamworks.net/Plugins/steam_api.bundle/Contents/MacOS/libsteam_api.dylib" Pack="true" LinkBase="native/osx-arm64">
 			<PackagePath>runtimes/osx-arm64/native</PackagePath>
 			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
-			<TargetPath>libsteam_api.dylib</TargetPath>
+			<TargetPath>runtimes/osx-arm64/libsteam_api.dylib</TargetPath>
 		</None>
 	</ItemGroup>
 	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' == 'true'">

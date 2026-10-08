@@ -46,7 +46,7 @@ g_SkippedStructs = (
     # steamdatagram_tickets.h
     "SteamDatagramHostedAddress",
     "SteamDatagramRelayAuthTicket",
-    "SteamIDComponent_t"
+    "SteamIDComponent_t",
     
     # steamclientpublic.h nested struct
     "GameID_t"
@@ -257,19 +257,19 @@ class Struct:
         self.packsize = packsize 
         self.c = comments  # Comment
         self.fields: list[StructField] = []  # StructField
-        self.nested_struct: list[Struct] = []  # nested structs
+        self.nest_defined_struct: list[Struct] = []  # structs that defined inside this struct
         self.outer_type: Struct | Union | None = None
         self.scopeDepth: int = scopePath
         self.callbackid: str | None = None
         self.endcomments = None  # Comment
         self.pack = packsize 
         self.size: int | None = None
-        self.packsize_aware = False
+        self.packsize_aware: bool | None = None
         self.is_skipped: bool = False
         self.is_sequential = packsize == "PlatformABIDefault"
         
     def calculate_offsets(self, defaultAlign: int):
-        def calcRealSize(sizelike: int | Literal['intptr']) -> int:
+        def normalizeSizeLike(sizelike: int | Literal['intptr']) -> int:
             if sizelike == 'intptr':
                 return 8
             else:
@@ -286,7 +286,7 @@ class Struct:
 
         for field in self.fields:
             pack = field.pack or defaultAlign
-            effective_field_pack = calcRealSize(pack) 
+            effective_field_pack = normalizeSizeLike(pack) 
             effective_field_pack = min(effective_field_pack, defaultAlign)
             padding = 0
             if effective_field_pack > 0:
@@ -297,7 +297,7 @@ class Struct:
                 return []
              
             effective_struct_pack = max(effective_struct_pack, effective_field_pack)
-            field_total_size = calcRealSize(field.size) * (field.arraysize or 1)
+            field_total_size = normalizeSizeLike(field.size) * (field.arraysize or 1)
             
             # store offset and total size into layout info
             result.append(FieldOffset(field.name, current_offset))
@@ -310,14 +310,14 @@ class Struct:
         #     total_size += padding
         
         self.pack = min(
-            calcRealSize(max(self.fields, key=lambda x: calcRealSize(x.size)).size),
+            normalizeSizeLike(max(self.fields, key=lambda x: normalizeSizeLike(x.size)).size),
             effective_struct_pack
         )
         self.size = total_size
         return result
 
     def should_not_generate(self):
-        return self.name in g_SkippedStructs or self.is_skipped or (self.outer_type is not None) or len(self.nested_struct) > 0
+        return self.name in g_SkippedStructs or self.is_skipped or (self.outer_type is not None) or len(self.nest_defined_struct) > 0
 
 class Union:
     def __init__(self, name, isUnnamed, pack):
@@ -461,7 +461,7 @@ class ParserState:
     def getCurrentPack(self) -> int | Literal['PlatformABIDefault'] | None:
         # pack size is default value
         # our parser can't evaluate #ifdefs, so in the situlation of 
-		# using default pack, the self.packsize will be [4, 8]
+        # using default pack, the self.packsize will be [4, 8]
         if self.packsize == [4, 8]:
             # default pack
             return None
@@ -491,7 +491,7 @@ class Parser:
         self.files.sort(key=lambda f: f.name)
 
         self.typedefs:list[Typedef] = [
-		]
+        ]
 
 
         for f in self.files:
@@ -514,9 +514,8 @@ class Parser:
                 
         
         self.populate_typedef_layouts()
-        # self.populate_struct_field_sizes()
 
-        # Hack to give us the GameServer interfaces.
+        # HACK to give us the GameServer interfaces.
         # We want this for autogen but probably don't want it for anything else.
         if Settings.fake_gameserver_interfaces:
             for f in [f for f in self.files if f.name in g_GameServerInterfaces]:
@@ -767,7 +766,7 @@ class Parser:
                 primitive_def = g_PrimitiveTypesLayout[typee]
                 typedef.pack = primitive_def.pack
                 typedef.size = primitive_def.size
-                return
+                continue
 
             def resolveFinalType(typee):
                 underlying_type: PrimitiveType | Typedef | None = g_PrimitiveTypesLayout.get(typee)
@@ -854,8 +853,8 @@ class Parser:
             # Skips lines like: "enum { k_name1 = value, k_name2 = value };"
             # Currently only skips one enum in CCallbackBase
             #
-			# Also steamnetworkingtypes.h has
-			# two different anon enum defined same named field,
+            # Also steamnetworkingtypes.h has
+            # two different anon enum defined same named field,
             # broke our project. Skip it.
             if "," in s.line or s.f.name == 'steamnetworkingtypes.h':
                 return
@@ -953,7 +952,7 @@ class Parser:
                 
                 # restore current struct in parser state to outer struct
                 if len(s.complexTypeStack) >= 2 and s.complexTypeStack[-2] == 'struct':
-                    currentStruct.outer_type.nested_struct.append(currentStruct)
+                    currentStruct.outer_type.nest_defined_struct.append(currentStruct)
                 
                 if s.struct.name in g_SpecialStructs:
                     s.struct.packsize_aware = False # HACK hope so
@@ -985,7 +984,7 @@ class Parser:
             if s.linesplit[1].endswith(";"):
                 return
 
-			# special structs
+            # special structs
             typeNameCandidate = s.linesplit[1]
             if typeNameCandidate in g_SpecialStructs.keys():
                 if s.linesplit[0] == 'struct':
@@ -1062,8 +1061,8 @@ class Parser:
             if '(' in fieldname or '(' in fieldtype\
                 or ')' in fieldname or ')' in fieldtype\
                 or '*' in fieldname\
-            	or '{' in fieldtype or '}' in fieldtype\
-            	or '{' in fieldname or '}' in fieldname:
+                or '{' in fieldtype or '}' in fieldtype\
+                or '{' in fieldname or '}' in fieldname:
                 return
 
 
@@ -1410,7 +1409,7 @@ class Parser:
     # I initially choose camel case by my habit, but keep this name here
     # for hinting it this is an external available API is also useful
     def resolveTypeInfo(self, typeName):
-        # search order: primitive, pointer, enum, typedef, struct. no callbacks
+        # search order: primitive, pointer, enum, typedef, struct(including callback structs)
         result = g_PrimitiveTypesLayout.get(typeName)
         
         if not result and '*' in typeName:
@@ -1462,15 +1461,15 @@ class Parser:
             if typeinfo is None:
                 # this usually means typedef is used inside a class,
                 # but reminder we treat classes as struct
+                print_debug(f"Struct {struct.name} has field {field.name} of type {field.type} which is not found, maybe it's a nested type or a typedef inside a class, we will ignore this struct for now")
                 self.ignoredStructs.append(struct)
                 return []
 
-            # check if we facing a struct which may not populated yet
+            # HACK recursively populate nested struct field layout, has a side effect of mutate the nested struct's fields' size and pack
             if isinstance(typeinfo, Struct):
                 # we assume there will no circular references across structs
-                if not typeinfo.size:
-                    self.populate_struct_field_layout(typeinfo, defaultPack)
-                    typeinfo.calculate_offsets(defaultPack)
+                self.populate_struct_field_layout(typeinfo, defaultPack)
+                typeinfo.calculate_offsets(defaultPack)
                     
             field.size = typeinfo.size
             field.pack = typeinfo.pack or struct.pack or defaultPack
@@ -1504,10 +1503,18 @@ class Parser:
                 offsetsSmallPack: list[FieldOffset] = struct.calculate_offsets(4)
                 offsetsSmallPack.sort(key = lambda item: item.name)
                 sizeSmall = struct.size
-                
+
+                if len(offsetsLargePack) != len(offsetsSmallPack) or len(offsetsLargePack) != len(struct.fields):
+                    # Error condition
+                    printWarning(f"Field count mismatch for struct '{struct.name}', caused by layouting failure in general", struct)
+
                 if offsetsLargePack != offsetsSmallPack or sizeLarge != sizeSmall:
                     print_debug(f"Found packsize aware struct '{struct.name}'")
                     struct.packsize_aware = True
+                
+                pass
+            
+                if struct.packsize_aware:
                     self.packSizeAwareStructs.append(struct.name)
 
         pass

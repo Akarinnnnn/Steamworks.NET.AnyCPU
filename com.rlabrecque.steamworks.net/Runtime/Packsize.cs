@@ -36,19 +36,24 @@
 #endif
 
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using IntPtr = System.IntPtr;
 
 namespace Steamworks {
 	public static class Packsize {
-#if VALVE_CALLBACK_PACK_LARGE
+#if VALVE_CALLBACK_PACK_LARGE // DO NOT Exclude this const as it is used as Packsize placeholder for the AnyCPU build.
 		internal const int value = 8;
 #elif VALVE_CALLBACK_PACK_SMALL
 		internal const int value = 4;
 #endif
-		public static readonly int Value = value;
 
 #if !STEAMWORKS_ANYCPU
+        /// <summary>
+        /// Get assembly defined value of structure pack size in non-AnyCPU build.
+        /// </summary>
+		public static readonly int Value = value;
+
 		public static bool Test() {
 			int sentinelSize = Marshal.SizeOf<ValvePackingSentinel_t>();
 			int subscribedFilesSize = Marshal.SizeOf<RemoteStorageEnumerateUserSubscribedFilesResult_t>();
@@ -61,34 +66,57 @@ namespace Steamworks {
 #endif
 			return true;
 		}
-#else
-		/// <summary>
-		/// Get runtime determined value of structure pack size.
-		/// </summary>
-		public readonly static int AnyCpuRuntimeValue = InitializeRuntimeValue();
 
+		[StructLayout(LayoutKind.Sequential, Pack = Packsize.value)]
+		private struct ValvePackingSentinel_t {
+			uint m_u32;
+			ulong m_u64;
+			ushort m_u16;
+			double m_d;
+		};
+#else
+        // Core packing value selection logic for AnyCPU builds. This is a bit of a HACK, but it works.
+        // We set the value of structure pack size by whether running on Windows
+        // to determine the correct value to use for the Packsize class.
+        // What if new packsizes are introduced? Then this will break, but for now it works.
+
+        /// <summary>
+        /// Get runtime determined value of structure pack size.
+        /// </summary>
+        public readonly static int AnyCpuRuntimeValue = InitializeRuntimeValue();
+
+        /// <summary>
+        /// Get runtime determined value of structure pack size in AnyCPU build. Reserved for binary compatibility with other builds. Use AnyCpuRuntimeValue instead.
+        /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Never)]
+		[Obsolete($"Use {nameof(AnyCpuRuntimeValue)} instead.")]
+        public readonly static int Value = AnyCpuRuntimeValue;
+
+		/// <summary>
+		/// Get the runtime determined value indicating large structure pack size in AnyCPU build.
+		/// </summary>
 		public readonly static bool IsLargePack = AnyCpuRuntimeValue == 8;
 
-		public readonly static bool IsSmallPack = AnyCpuRuntimeValue == 4;
+        /// <summary>
+        /// Get the runtime determined value indicating small structure pack size in AnyCPU build.
+        /// </summary>
+        public readonly static bool IsSmallPack = AnyCpuRuntimeValue == 4;
 
-        private static int InitializeRuntimeValue()
-		{
+        private static int InitializeRuntimeValue() {
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 				return 8;
 			else
 				return 4;
 		}
 
-		public static bool Test() { return true; }
+		/// <summary>
+		/// No effect in AnyCPU build, but required for binary compatibility with other builds.
+		/// </summary>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		[Obsolete($"This method has no effect in AnyCPU builds.")]
+        public static bool Test() => true;
 #endif
-
-		[StructLayout(LayoutKind.Sequential, Pack = Packsize.value)]
-		struct ValvePackingSentinel_t {
-			uint m_u32;
-			ulong m_u64;
-			ushort m_u16;
-			double m_d;
-		};
 	}
 }
 

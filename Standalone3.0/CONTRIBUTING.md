@@ -76,7 +76,7 @@ Steamworks.NET.AnyCPU originated as a patch for Steamworks.NET. However, due to 
 - **`native/`**: Steamworks native dependencies for supported platforms. Linked from `$REPOSITORY_ROOT/com.rlabrecque.steamworks.net/Plugin`
   - **Important**: These are provided by Valve, bundled with the current version, and should not be edited.
   - If you need to update them for upgrading target SDK version, ask the whole Steamworks.NET community.
-  - Primary maintainer @Akarinnnnn will sync the update and publish a new version of Steamworks.NET.AnyCPU to NuGet. Publishing process is automated by Git tag triggers, but the update of native dependencies is not. Please contact @Akarinnnnn if you want to help with this.
+  - Primary maintainer @Akarinnnnn will sync the update and publish a new version of Steamworks.NET.AnyCPU to NuGet. Publishing process is automated by Git tag CI/CD triggers, but the update of native dependencies is not. Please submit an issue if you want to help with this.
 
 - **`anycpu/`**: The AnyCPU specific source code. This is where you should make your edits for the AnyCPU version of Steamworks.NET.
   - The sub-folder structure is mirrored with `src/`.
@@ -165,9 +165,9 @@ You should regenerate code when:
 
 ### Testing Strategy
 1. **Compilation Testing**: Ensure the project builds without errors
-2. **Runtime Testing**: Test basic Steamworks functionality, `SteamAPI.Init()` and `SteamAPI.Shutdown()`
+2. **Runtime Testing**: Test basic Steamworks functionality, `SteamAPI.InitEx()` and `SteamAPI.Shutdown()`
 3. **Cross-Platform Testing**: Verify on different architectures, do your best
-4. **Integration Testing**: Test with Unity projects (if applicable)
+4. **Integration Testing**: Test with Godot projects (if applicable)
 
 ### Creating Tests
 When adding new features or fixing bugs:

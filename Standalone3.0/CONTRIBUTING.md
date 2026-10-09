@@ -25,7 +25,7 @@ Steamworks.NET.AnyCPU originated as a patch for Steamworks.NET. However, due to 
 - @ryan-linehan CI/CD in NuGet packaging
 
 **Credits**
-- @rlabrecque 
+- @rlabrecque Original Steamworks.NET author, original CodeGen author, and original SteamworksParser author
 
 ## Getting Started
 
@@ -33,7 +33,7 @@ Steamworks.NET.AnyCPU originated as a patch for Steamworks.NET. However, due to 
 - **Python 3.13** (required for CodeGen)
 - **.NET SDK** (version specified in project files)
 - **Git**
-- **Visual Studio 2022** or **Visual Studio Code** (using VSC for Python, VS for C# is recommended)
+- **Visual Studio 2026** or **Visual Studio Code** (using VSC for Python, VS for C# is recommended)
 - **Rider** and **PyCharm** (if you prefer JetBrains tools, but currently `.gitignore` isn't ready for them)
 
 ### Setting Up Development Environment
@@ -62,7 +62,7 @@ Steamworks.NET.AnyCPU originated as a patch for Steamworks.NET. However, due to 
 
 5. Create your `Steamworks.NET.AnyCPU` package
 	```bash
-	dotnet pack --version $SEMVER Standalone3.0/Steamworks.NET.sln
+	dotnet pack -p:Version=$SEMVER -c Release Standalone3.0/Steamworks.NET.sln
 	```
 
 ## Project Structure
@@ -76,10 +76,13 @@ Steamworks.NET.AnyCPU originated as a patch for Steamworks.NET. However, due to 
 - **`native/`**: Steamworks native dependencies for supported platforms. Linked from `$REPOSITORY_ROOT/com.rlabrecque.steamworks.net/Plugin`
   - **Important**: These are provided by Valve, bundled with the current version, and should not be edited.
   - If you need to update them for upgrading target SDK version, ask the whole Steamworks.NET community.
+  - Primary maintainer @Akarinnnnn will sync the update and publish a new version of Steamworks.NET.AnyCPU to NuGet. Publishing process is automated by Git tag triggers, but the update of native dependencies is not. Please contact @Akarinnnnn if you want to help with this.
 
 - **`anycpu/`**: The AnyCPU specific source code. This is where you should make your edits for the AnyCPU version of Steamworks.NET.
   - The sub-folder structure is mirrored with `src/`.
   - **Important**: Files prefixed with `*.g.cs` are **generated** and should not be edited directly. If you need to edit them, edit the Generator in `$REPOSITORY_ROOT/CodeGen` and regenerate the code.
+
+- **`docs/`**: Task-oriented guides for consumers of the package, such as [Customizing the Steamworks Native Library Resolver](<./docs/Customize Steamworks Native Resolver.md>).
 
 ### 2. `$REPOSITORY_ROOT/CodeGen`
 Python project, C# binding generator(Binder). This repository uses Python 3.13 to run the code. Previously contained the submodule `CodeGen/SteamworksParser/`, later integrated into this repository via `git subtree`.
@@ -92,15 +95,19 @@ Python project, C# binding generator(Binder). This repository uses Python 3.13 t
 ## Development Workflow
 
 ### Branch Strategy
-- Stable release branch doesn't exist currently, production-ready code is hold in tags.
-- **`anycpu-2`**: Development branch for upcoming features
-- **Feature branches**: `feature/description` (e.g., `feature/add-new-interface`)
-- **Bug fix branches**: `fix/issue-description` (e.g., `fix/memory-leak-issue123`)
-- **Hotfix branches**: `hotfix/critical-issue` (for urgent fixes to production)
+- Stable release branch is `anycpu-2`, production-ready code is hold in tags.
+- **`anycpu-2`**: Stable branch of AnyCPU fork
+- **`anycpu-dev`**: Development branch for upcoming features, small changes are commited here in general
+- **Large feature branches**: `feature/description` (e.g., `feature/bind-against-1.66`)
+- **Crtitcal bug fix branches**: `fix/issue-description` (e.g., `fix/memory-leak-issue123`)
+- **Large hotfix branches**: `hotfix/critical-issue` (for large urgent fixes to production)
+
+There are some legacy branches present in the repository, but they are not actively maintained. Please avoid using them for new development.
 
 ### Commit Guidelines
 - Use descriptive commit messages in the present tense
 - Reference issue numbers when applicable (e.g., `Fixes #123`)
+- AI assisted commits are allowed through tag `Assisted-By` instead of `Co-Authored-By`, but please review and edit them for clarity and accuracy
 
 ### Coding Standards
 - Enable `.editorconfig` support to your editor, most coding standards are defined there
@@ -112,11 +119,11 @@ Python project, C# binding generator(Binder). This repository uses Python 3.13 t
 
 ### When to Regenerate Code
 You should regenerate code when:
-1. Steamworks SDK headers are updated
-2. Templates are modified
-3. Binder logic is changed
-4. New types need to be added
-5. Fixing issues in generated code
+1. Fixing issues in generated code
+2. Steamworks SDK headers are updated
+3. Templates are modified
+4. Binder logic is changed
+5. New types need to be added
 
 ### Regeneration Process
 1. Navigate to `CodeGen/` directory:
@@ -257,6 +264,7 @@ Contributors will be:
 ### Documentation
 - [Steamworks Documentation](https://partner.steamgames.com/doc/sdk)
 - [Original Steamworks.NET Documentation](https://steamworks.github.io/)
+- [Customizing the Steamworks Native Library Resolver](<./docs/Customize Steamworks Native Resolver.md>) — how to supply your own `DllImportResolver` for AnyCPU builds
 
 ### Useful Commands
 ```bash

@@ -61,15 +61,15 @@ jobs:
             --include-source \
             --property:Version=${{ steps.version.outputs.version }} \
             --property:PackageVersion=${{ steps.version.outputs.version }} \
-            --output ./Standalone3.0/bin/artifacts/
+            --output bin/artifacts/
 
       - name: Upload NuGet package artifact
         uses: actions/upload-artifact@v4
         with:
           name: nuget-package
-          path: |
-            ./Standalone3.0/bin/artifacts/*.nupkg # primary packages
-            ./Standalone3.0/bin/artifacts/*.snupkg # debug symbol packages with source link to the GitHub repo
+          # *.nupkg for primary packages
+          # *.snupkg for debug symbol packages with source link to the GitHub repo
+          path: bin/artifacts/
           retention-days: 30
           if-no-files-found: warn
 

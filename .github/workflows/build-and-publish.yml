@@ -95,4 +95,4 @@ jobs:
 
       - name: NuGet push
         run: |
-          dotnet nuget push ./packages/*.nupkg ./packages/*.snupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+          dotnet nuget push ./packages/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json

@@ -2,6 +2,8 @@
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
+		<LangVersion>12</LangVersion>
+		
 		<RootNamespace>Steamworks</RootNamespace>
 		<RepositoryType>git</RepositoryType>
 		<DefineConstants>STEAMWORKS_LIN_OSX;STEAMWORKS_X64;STEAMWORKS_ANYCPU</DefineConstants>
@@ -10,27 +12,34 @@
 
 	<PropertyGroup Label="Nuget PM">
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<!-- Once Any CPU get merged, remove next line to restore package ID to Steamworks.NET. -->
 		<PackageId>Steamworks.NET.AnyCPU</PackageId>
 		<Authors>rlabrecque Fa鸽</Authors>
 		<!--
-		Version is specified by build commandline, -p:Version=2025.8.18 
-		<PackageVersion>15.0.1</PackageVersion>
+			Prpoerty $(Version) is specified on-demand by
+			- dotnet build commandline parameter, `-p:Version=2025.8.18`
+			- or EnvVar `$env:Version = "2025.8.18"`
 		-->
+		<PackageVersion Condition="'$(Version)' == '' and '$(PackageVersion)' == ''">0.0.0-a.do.not.publish</PackageVersion>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/Akarinnnnn/Steamworks.NET.AnyCPU</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/Akarinnnnn/Steamworks.NET.AnyCPU.git</RepositoryUrl>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 
+	<PropertyGroup Label="SourceLink">
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<Compile Include="../com.rlabrecque.steamworks.net/Runtime/**/*.cs" LinkBase="src" />
 	</ItemGroup>
-	<ItemGroup>
+	<ItemGroup Label="Docs and GitHub Actions">
 		<None Include="../Standalone/README.md" Link="README-standalone.md" Pack="true" PackagePath="docs/README-standalone.md" />
 		<None Include="../README.md" Link="README.md" Pack="true" PackagePath="README.md" />
+		<None Include="$(MSBuildThisFileDirectory)../.github/**" Pack="false" LinkBase=".github/" />
+		<None Update="$(MSBuildThisFileDirectory)docs/**/*.md" Pack="true" PackagePath="docs/anycpu/%(Filename)%(Extension)" />
 	</ItemGroup>
 	<ItemGroup>
 		<!--
@@ -53,12 +62,12 @@
 			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
 			<TargetPath>runtimes/linux-x64/libsteam_api.so</TargetPath>
 		</None>
-		<None Include="../com.rlabrecque.steamworks.net/Plugins/androidarm64/libsteam_api.so" Pack="true" LinkBase="native" Link="native/android-arm64/libsteam_api.so">
+		<None Include="../com.rlabrecque.steamworks.net/Plugins/androidarm64/libsteam_api.so" Pack="true" LinkBase="native/android-arm64/">
 			<PackagePath>runtimes/android-arm64/native</PackagePath>
 			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
 			<TargetPath>runtimes/android-arm64/libsteam_api.so</TargetPath>
 		</None>
-		<None Include="../com.rlabrecque.steamworks.net/Plugins/linuxarm64/libsteam_api.so" Pack="true" LinkBase="native" Link="native/linux-arm64/libsteam_api.so">
+		<None Include="../com.rlabrecque.steamworks.net/Plugins/linuxarm64/libsteam_api.so" Pack="true" LinkBase="native/linux-arm64/">
 			<PackagePath>runtimes/linux-arm64/native</PackagePath>
 			<CopyToOutputDirectory Condition="'$(DisableSNetDevelopmentAssets)' == ''">PreserveNewest</CopyToOutputDirectory>
 			<TargetPath>runtimes/linux-arm64/libsteam_api.so</TargetPath>
@@ -75,8 +84,8 @@
 			<TargetPath>runtimes/osx-arm64/libsteam_api.dylib</TargetPath>
 		</None>
 	</ItemGroup>
-	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' == 'true'">
-	  <EditorConfigFiles Remove=".editorconfig" />
-	  <None Include=".editorconfig" />
+	<ItemGroup Label="Visual Studio Hacks" Condition="'$(BuildingInsideVisualStudio)' == 'true'">
+		<EditorConfigFiles Remove=".editorconfig" />
+		<None Include=".editorconfig" />
 	</ItemGroup>
 </Project>

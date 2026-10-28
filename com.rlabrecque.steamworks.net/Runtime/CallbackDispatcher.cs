@@ -216,7 +216,6 @@ namespace Steamworks {
 									m_registeredCallResults.Remove((ulong)callCompletedCb.m_hAsyncCall);
 									foreach (var cr in callResults) {
 										cr.OnRunCallResult(pTmpCallResult, bFailed, (ulong)callCompletedCb.m_hAsyncCall);
-										cr.SetUnregistered();
 									}
 								}
 							}
@@ -461,6 +460,8 @@ namespace Steamworks {
 		internal protected override void OnRunCallResult(IntPtr pvParam, bool bFailed, ulong hSteamAPICall_) {
 			SteamAPICall_t hSteamAPICall = (SteamAPICall_t)hSteamAPICall_;
 			if (hSteamAPICall == m_hAPICall) {
+				// Unregister before the handler runs (as the C++ SDK does) so the handler can call Set() again.
+				SetUnregistered();
 				try {
 					T result;
 #if !STEAMWORKS_ANYCPU
